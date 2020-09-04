@@ -5,7 +5,7 @@
 
     // get user id
     const myPeerId = location.hash.slice(1);
-    console.log(myPeerId);
+    console.log("Connecting as " + myPeerId);
 
     // create new user and establish connection to server
     let peer = new Peer(myPeerId, { 
@@ -31,14 +31,11 @@
         const messageWrapperDiv = document.createElement("div");
         const newMessageDiv = document.createElement("div");
         newMessageDiv.innerText = message + " | " + new Date().toLocaleTimeString();
-        console.log(message);
         messageWrapperDiv.classList.add("message");
         if (who === "me") {
             messageWrapperDiv.classList.add("me");
-            console.log("me");
         } else if (who === "them") {
             messageWrapperDiv.classList.add("them");
-            console.log("them");
         }
         messageWrapperDiv.appendChild(newMessageDiv);
         messagesDiv.appendChild(messageWrapperDiv);
@@ -52,8 +49,7 @@
         console.log(error);
     });
     peer.on("connection", (newConnection) => {
-        console.log("Connection established from remote peer");
-        console.log(newConnection);
+        console.log("Connection established from remote peer " + newConnection.peerId);
         // close pre-existing connection
         connection && connection.close();
         // accept the new connection
@@ -61,7 +57,6 @@
 
         // add callbacks for connection events
         connection.on("data", (data) => {
-            console.log(data);
             printMessage(data, "them");
         });
 
@@ -75,20 +70,16 @@
     const connectToPeerClick = (event) => {
         // extract peer id
         const peerId = event.target.innerText;
-        console.log(peerId);
         // close pre-existing connection
         connection && connection.close();
         // get new connection
         connection = peer.connect(peerId);
-        //console.log(connection);
         connection.on("open", () => {
-            console.log("Connection open");
-            //console.log(connection._open);
+            console.log("Connection established to " + peerId);
             // create peer changed event and dispatch it
             const peerChangedEvent = new CustomEvent("peer-changed", {detail: {peerId: peerId}});
             document.dispatchEvent(peerChangedEvent);
             connection.on("data", (data) => {
-                console.log(data);
                 printMessage(data, "them");
             });
         });
@@ -133,12 +124,7 @@
 
     document.addEventListener("peer-changed", (event) => {
         const peerId = event.detail.peerId;
-        //console.log(event);
-        //console.log(peerId);
-        // const connectedButtons = document.querySelectorAll(".connected");
-        // console.log(connectedButtons);
         document.querySelectorAll(".connect-button.connected").forEach((button) => {
-            //console.log(button.classList);
             button.classList.remove("connected");
         });
         const connectedButton = document.querySelector(`.peerId-${peerId}`);
@@ -147,10 +133,8 @@
 
     const sendButton = document.querySelector(".send-new-message-button");
     sendButton.addEventListener("click", (event) => {
-        console.log("send button clicked");
         if (connection) {
             const message = document.querySelector(".new-message").value;
-            console.log("send " + message + " to " + connection.peer);
             connection.send(message);
 
             printMessage(message, "me");
