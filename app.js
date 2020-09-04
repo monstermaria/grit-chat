@@ -2,6 +2,8 @@
 (function () {
     // initiate variables
     let connection = null;
+    let peerList = null;
+    const peerListDiv = document.querySelector(".peers");
 
     // get user id
     const myPeerId = location.hash.slice(1);
@@ -51,9 +53,7 @@
         console.log(error);
     });
     peer.on("connection", (newConnection) => {
-        console.log(
-            "Connection established from remote peer " + newConnection.peer
-        );
+        console.log("Incoming connection from " + newConnection.peer);
 
         // close pre-existing connection
         connection && connection.close();
@@ -86,7 +86,7 @@
 
         // add callbacks for connection events
         connection.on("open", () => {
-            console.log("Connection established to " + peerId);
+            console.log("Outgoing connection to " + peerId);
 
             // create peer changed event and dispatch it
             const peerChangedEvent = new CustomEvent("peer-changed", {
@@ -99,24 +99,36 @@
         });
     };
 
-    //callback for listAllPeers
-    function handlePeerList(peerList) {}
+    // create peer list item
+    function createPeerListItem(peerId) {
+        // create necessary elements
+        const peerItem = document.createElement("li");
+        const peerButton = document.createElement("button");
 
-    // callback for refresh peer list
-    function refreshPeerList() {}
+        // configure button
+        peerButton.innerText = peerId;
+        peerButton.classList.add("connect-button");
+        peerButton.classList.add(`peerId-${peerId}`);
+        if (connection && connection.peer === peerId) {
+            peerButton.classList.add("connected");
+        }
+        peerButton.addEventListener("click", connectToPeerClick);
+
+        // add elements
+        peerItem.appendChild(peerButton);
+        peerList.appendChild(peerItem);
+    }
 
     // handle user list
     const allPeersButton = document.querySelector(".list-all-peers-button");
     allPeersButton.addEventListener("click", () => {
-        const peerListDiv = document.querySelector(".peers");
-
         // remove old list(s), if any
         while (peerListDiv.hasChildNodes()) {
             peerListDiv.firstChild.remove();
         }
 
         // create new list
-        const peerList = document.createElement("ul");
+        peerList = document.createElement("ul");
 
         // populate new peer list (peer is the file global object)
         peer.listAllPeers((peers) => {
@@ -124,30 +136,14 @@
             const filteredPeers = peers.filter((peerId) => peerId !== myPeerId);
 
             // add a list item for each peer
-            filteredPeers.forEach((peerId) => {
-                // create necessary elements
-                const peerItem = document.createElement("li");
-                const peerButton = document.createElement("button");
-
-                // configure button
-                peerButton.innerText = peerId;
-                peerButton.classList.add("connect-button");
-                peerButton.classList.add(`peerId-${peerId}`);
-                if (connection && connection.peer === peerId) {
-                    peerButton.classList.add("connected");
-                }
-                peerButton.addEventListener("click", connectToPeerClick);
-
-                // add elements
-                peerItem.appendChild(peerButton);
-                peerList.appendChild(peerItem);
-            });
+            filteredPeers.forEach(createPeerListItem);
         });
 
         // append the new peerList
         peerListDiv.appendChild(peerList);
     });
 
+    // handle "peer-changed"-event
     document.addEventListener("peer-changed", (event) => {
         const peerId = event.detail.peerId;
         document
