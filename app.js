@@ -156,4 +156,12 @@
             printMessage(message, "me");
         }
     })
+
+    // implement send on return
+    const textInput = document.querySelector(".new-message");
+    textInput.addEventListener("keyup", (event) => {
+        if (event.keyCode === 13) {
+            sendButton.click();
+        }
+    });
 })();
