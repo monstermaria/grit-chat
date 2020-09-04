@@ -30,7 +30,7 @@
         const messagesDiv = document.querySelector(".messages");
         const messageWrapperDiv = document.createElement("div");
         const newMessageDiv = document.createElement("div");
-        newMessageDiv.innerText = message;
+        newMessageDiv.innerText = message + " | " + new Date().toLocaleTimeString();
         console.log(message);
         messageWrapperDiv.classList.add("message");
         if (who === "me") {
