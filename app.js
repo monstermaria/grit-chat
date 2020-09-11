@@ -3,7 +3,10 @@
     // initiate variables
     let connection = null;
     let peerList = null;
+    let myStream = null;
+    let mediaConnection = null;
     const peerListDiv = document.querySelector(".peers");
+    const video = document.querySelector(".video-container.them");
 
     // get user id
     const myPeerId = location.hash.slice(1);
@@ -43,7 +46,50 @@
         }
         messageWrapperDiv.appendChild(newMessageDiv);
         messagesDiv.appendChild(messageWrapperDiv);
+        messagesDiv.scrollTo(0, messagesDiv.scrollHeight);
     }
+
+    // handle incoming stream
+    const mediaConnOnStream = (theirStream) => {
+        console.log("Incoming stream");
+        const video = document.querySelector(".video-container.them video");
+        video.muted = false;
+        video.srcObject = theirStream;
+        document
+            .querySelector(".video-container.them .start")
+            .classList.remove("active");
+        document
+            .querySelector(".video-container.them .stop")
+            .classList.add("active");
+    };
+
+    // stop video click handler
+    const stopVideoCall = () => {
+        console.log("stopping video");
+        mediaConnection && mediaConnection.close();
+        const video = document.querySelector(".video-container.them");
+        video.querySelector(".stop").classList.remove("active");
+        video.querySelector(".start").classList.add("active");
+    };
+
+    document
+        .querySelector(".video-container.them .stop")
+        .addEventListener("click", stopVideoCall);
+
+    //start video click handler
+    const startVideoCall = () => {
+        console.log("starting video");
+        const video = document.querySelector(".video-container.them");
+        // my code
+        mediaConnection = peer.call(connection.peer, myStream);
+        mediaConnection.on("stream", (stream) => {
+            mediaConnOnStream(stream);
+        });
+    };
+
+    document
+        .querySelector(".video-container.them .start")
+        .addEventListener("click", startVideoCall);
 
     // add callbacks for peer events
     peer.on("open", (id) => {
@@ -71,6 +117,21 @@
             detail: { peerId: connection.peer }
         });
         document.dispatchEvent(peerChangedEvent);
+    });
+    peer.on("call", (incommingCall) => {
+        // ask the user if they wants to answer the call
+        if (confirm(`Answer call from ${incommingCall.peer}?`)) {
+            // close pre-existing media connection
+            mediaConnection && mediaConnection.close();
+            // store the connection
+            mediaConnection = incommingCall;
+            console.log("Incoming media connection");
+            console.log(mediaConnection);
+            // answer with the users stream
+            mediaConnection.answer(myStream);
+            // handle the callers stream
+            mediaConnection.on("stream", mediaConnOnStream);
+        }
     });
 
     // callback for connect to peer
@@ -153,14 +214,32 @@
             });
         const connectedButton = document.querySelector(`.peerId-${peerId}`);
         connectedButton && connectedButton.classList.add("connected");
+
+        // handle video calls
+        stopVideoCall();
+        const video = document.querySelector(".video-container.them");
+        video.querySelector(".name").innerText = peerId;
+        video.classList.add("connected");
     });
+
+    // show and store my video
+    navigator.mediaDevices
+        .getUserMedia({ audio: true, video: true })
+        .then((stream) => {
+            const myVideo = document.querySelector(".video-container.me video");
+            myVideo.muted = true;
+            myVideo.srcObject = stream;
+            myStream = stream;
+        });
 
     // send message on click on send button
     const sendButton = document.querySelector(".send-new-message-button");
     sendButton.addEventListener("click", (event) => {
         if (connection) {
-            const message = document.querySelector(".new-message").value;
+            const messageInput = document.querySelector(".new-message");
+            const message = messageInput.value;
             connection.send(message);
+            messageInput.value = "";
 
             printMessage(message, "me");
         }
